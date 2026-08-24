@@ -291,7 +291,7 @@ def main() -> None:
     ap.add_argument("--format", "-f", default="markdown",
                     choices=["markdown", "typst", "text"])
     ap.add_argument("--user-label", default="User",
-                    help='how to name the human speaker (e.g. "User", "Daniel")')
+                    help='how to name the human speaker (e.g. "User", or a real name)')
     ap.add_argument("--assistant-label", default="ChatGPT")
     ap.add_argument("--sources", dest="sources_mode", default="section",
                     choices=["section", "footnotes", "none"],

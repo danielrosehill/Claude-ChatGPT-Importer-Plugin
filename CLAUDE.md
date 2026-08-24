@@ -38,8 +38,9 @@ committed.
 - `mcp__claude-in-chrome__javascript_tool` does not await the last expression.
   A bare `(async () => {...})()` serializes as `{}`. Capture snippets start
   with `await`.
-- Chrome's download directory here is `~/Desktop`, not `~/Downloads`. Locate
-  captured files by name and mtime.
+- Chrome's download directory is a per-profile setting and is not reliably
+  `~/Downloads` (it was `~/Desktop` where this was developed). Locate captured
+  files by name and mtime.
 - The ChatGPT DOM is virtualised — about 5 of 34 messages exist at any scroll
   position, and `data-testid` indices reflect scroll, not thread position. A
   single-pass scrape returns a fraction and does not error.

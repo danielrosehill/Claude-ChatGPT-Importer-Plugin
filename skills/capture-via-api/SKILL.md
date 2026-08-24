@@ -43,8 +43,8 @@ normalizer renders the branch the UI last displayed and reports the rest in
 ## Finding the downloaded file
 
 **Do not assume `~/Downloads`.** Chrome's download directory is a per-profile
-setting and is `~/Desktop` on at least one machine this plugin is used on.
-Locate it by name instead:
+setting and is not always the default — `~/Desktop` is a common alternative.
+Locate the file by name instead:
 
 ```bash
 find ~ -maxdepth 3 -name 'chatgpt-conversation-*.json' -mmin -3 2>/dev/null

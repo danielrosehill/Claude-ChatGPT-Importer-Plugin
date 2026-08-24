@@ -177,9 +177,10 @@ Selectors as of 2026-08-24:
 
 ## Environment notes
 
-- **Chrome's download directory is not necessarily `~/Downloads`.** On the
-  machine this was built against it is `~/Desktop`. Locate captured files by
-  name and mtime, never by assuming the path.
+- **Chrome's download directory is not necessarily `~/Downloads`.** It is a
+  per-profile setting; `~/Desktop` was the value on the machine this was
+  verified against. Locate captured files by name and mtime, never by assuming
+  the path.
 - `mcp__claude-in-chrome__javascript_tool` does not await the value of the last
   expression. A bare `(async () => {...})()` serializes as `{}` and reads as a
   silent failure; the snippet must start with `await`.

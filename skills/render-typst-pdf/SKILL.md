@@ -7,7 +7,7 @@ description: Render a ChatGPT conversation as a styled PDF using a Typst templat
 
 ```bash
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/render_pdf.py" <normalized.json> \
-  -o <out.pdf> --user-label "Daniel" --timestamps
+  -o <out.pdf> --user-label "User" --timestamps
 ```
 
 Requires `pandoc` (>= 3.0, for the typst writer) and `typst` on PATH. The script
@@ -19,7 +19,7 @@ This is the renderer where identity is a real choice. `--user-label` sets what
 appears on every human turn and in the cover block.
 
 - `User` — neutral, right for anything machine-facing or shared onward.
-- A real name (`Daniel`) — right for a personal archive or a document going to
+- The user's own name — right for a personal archive or a document going to
   someone who knows the participants.
 
 **Ask which one the user wants** if they have not said, rather than defaulting
