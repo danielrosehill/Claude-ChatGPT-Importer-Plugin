@@ -1,0 +1,18 @@
+# Imported conversations are private by default. Nothing captured from a
+# ChatGPT account is ever committed to this repo.
+imports/
+out/
+*.conversation.json
+chatgpt-conversation-*.json
+conversations.json
+*-conversation.md
+specimen*.json
+fixtures/real/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS
+.DS_Store

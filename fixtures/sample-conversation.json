@@ -1,0 +1,335 @@
+{
+ "title": "Sample onboarding conversation",
+ "create_time": 1750000000.0,
+ "update_time": 1750000180.0,
+ "mapping": {
+  "root": {
+   "id": "root",
+   "parent": null,
+   "children": [
+    "n1"
+   ],
+   "message": null
+  },
+  "n1": {
+   "id": "n1",
+   "parent": "root",
+   "children": [
+    "n2"
+   ],
+   "message": {
+    "id": "n1",
+    "author": {
+     "role": "system",
+     "name": null,
+     "metadata": {}
+    },
+    "create_time": 1750000000.0,
+    "update_time": null,
+    "content": {
+     "content_type": "text",
+     "parts": [
+      ""
+     ]
+    },
+    "status": "finished_successfully",
+    "end_turn": true,
+    "weight": 1,
+    "metadata": {
+     "is_visually_hidden_from_conversation": true
+    },
+    "recipient": "all",
+    "channel": "final"
+   }
+  },
+  "n2": {
+   "id": "n2",
+   "parent": "n1",
+   "children": [
+    "n3"
+   ],
+   "message": {
+    "id": "n2",
+    "author": {
+     "role": "user",
+     "name": null,
+     "metadata": {}
+    },
+    "create_time": 1750000010.0,
+    "update_time": null,
+    "content": {
+     "content_type": "text",
+     "parts": [
+      "Draft a short onboarding checklist and cite a source."
+     ]
+    },
+    "status": "finished_successfully",
+    "end_turn": true,
+    "weight": 1,
+    "metadata": {},
+    "recipient": "all",
+    "channel": "final"
+   }
+  },
+  "n3": {
+   "id": "n3",
+   "parent": "n2",
+   "children": [
+    "n4"
+   ],
+   "message": {
+    "id": "n3",
+    "author": {
+     "role": "assistant",
+     "name": null,
+     "metadata": {}
+    },
+    "create_time": 1750000040.0,
+    "update_time": null,
+    "content": {
+     "content_type": "text",
+     "parts": [
+      "Here is a checklist.\n\n## Before day one\n\n- Order hardware\n- Create accounts\n\n```bash\necho setup\nmkdir -p /srv/app\ncd /srv/app\nls -la\n```\n"
+     ]
+    },
+    "status": "finished_successfully",
+    "end_turn": true,
+    "weight": 1,
+    "metadata": {
+     "model_slug": "gpt-5-6",
+     "citations": [
+      {
+       "metadata": {
+        "title": "Onboarding guide",
+        "url": "https://example.org/onboarding",
+        "text": "A guide."
+       }
+      }
+     ]
+    },
+    "recipient": "all",
+    "channel": "final"
+   }
+  },
+  "n4": {
+   "id": "n4",
+   "parent": "n3",
+   "children": [
+    "n5"
+   ],
+   "message": {
+    "id": "n4",
+    "author": {
+     "role": "user",
+     "name": null,
+     "metadata": {}
+    },
+    "create_time": 1750000090.0,
+    "update_time": null,
+    "content": {
+     "content_type": "text",
+     "parts": [
+      "Put it in a canvas doc."
+     ]
+    },
+    "status": "finished_successfully",
+    "end_turn": true,
+    "weight": 1,
+    "metadata": {},
+    "recipient": "all",
+    "channel": "final"
+   }
+  },
+  "n5": {
+   "id": "n5",
+   "parent": "n4",
+   "children": [
+    "n6"
+   ],
+   "message": {
+    "id": "n5",
+    "author": {
+     "role": "assistant",
+     "name": null,
+     "metadata": {}
+    },
+    "create_time": 1750000100.0,
+    "update_time": null,
+    "content": {
+     "content_type": "code",
+     "language": "json",
+     "text": "{\"name\": \"onboarding_checklist\", \"type\": \"document\", \"content\": \"# Onboarding\\n\\n1. Hardware\\n2. Accounts\\n\"}"
+    },
+    "status": "finished_successfully",
+    "end_turn": true,
+    "weight": 1,
+    "metadata": {
+     "model_slug": "gpt-5-6"
+    },
+    "recipient": "canmore.create_textdoc",
+    "channel": "commentary"
+   }
+  },
+  "n6": {
+   "id": "n6",
+   "parent": "n5",
+   "children": [
+    "n7",
+    "n8"
+   ],
+   "message": {
+    "id": "n6",
+    "author": {
+     "role": "assistant",
+     "name": null,
+     "metadata": {}
+    },
+    "create_time": 1750000110.0,
+    "update_time": null,
+    "content": {
+     "content_type": "text",
+     "parts": [
+      "Created the canvas document."
+     ]
+    },
+    "status": "finished_successfully",
+    "end_turn": true,
+    "weight": 1,
+    "metadata": {
+     "model_slug": "gpt-5-6"
+    },
+    "recipient": "all",
+    "channel": "final"
+   }
+  },
+  "n7": {
+   "id": "n7",
+   "parent": "n6",
+   "children": [],
+   "message": {
+    "id": "n7",
+    "author": {
+     "role": "user",
+     "name": null,
+     "metadata": {}
+    },
+    "create_time": 1750000150.0,
+    "update_time": null,
+    "content": {
+     "content_type": "text",
+     "parts": [
+      "ABANDONED BRANCH - must not appear in output"
+     ]
+    },
+    "status": "finished_successfully",
+    "end_turn": true,
+    "weight": 1,
+    "metadata": {},
+    "recipient": "all",
+    "channel": "final"
+   }
+  },
+  "n8": {
+   "id": "n8",
+   "parent": "n6",
+   "children": [
+    "n9"
+   ],
+   "message": {
+    "id": "n8",
+    "author": {
+     "role": "user",
+     "name": null,
+     "metadata": {}
+    },
+    "create_time": 1750000160.0,
+    "update_time": null,
+    "content": {
+     "content_type": "multimodal_text",
+     "parts": [
+      "Here is our logo.",
+      {
+       "content_type": "image_asset_pointer",
+       "asset_pointer": "file-service://file-ABC123",
+       "width": 512,
+       "height": 512,
+       "size_bytes": 40312
+      }
+     ]
+    },
+    "status": "finished_successfully",
+    "end_turn": true,
+    "weight": 1,
+    "metadata": {},
+    "recipient": "all",
+    "channel": "final"
+   }
+  },
+  "n9": {
+   "id": "n9",
+   "parent": "n8",
+   "children": [
+    "n10"
+   ],
+   "message": {
+    "id": "n9",
+    "author": {
+     "role": "assistant",
+     "name": null,
+     "metadata": {}
+    },
+    "create_time": 1750000170.0,
+    "update_time": null,
+    "content": {
+     "content_type": "some_future_type",
+     "unexpected_field": "value"
+    },
+    "status": "finished_successfully",
+    "end_turn": true,
+    "weight": 1,
+    "metadata": {
+     "model_slug": "gpt-5-6"
+    },
+    "recipient": "all",
+    "channel": "final"
+   }
+  },
+  "n10": {
+   "id": "n10",
+   "parent": "n9",
+   "children": [],
+   "message": {
+    "id": "n10",
+    "author": {
+     "role": "assistant",
+     "name": null,
+     "metadata": {}
+    },
+    "create_time": 1750000180.0,
+    "update_time": null,
+    "content": {
+     "content_type": "text",
+     "parts": [
+      "Logo received. Checklist is ready."
+     ]
+    },
+    "status": "finished_successfully",
+    "end_turn": true,
+    "weight": 1,
+    "metadata": {
+     "model_slug": "gpt-5-6"
+    },
+    "recipient": "all",
+    "channel": "final"
+   }
+  }
+ },
+ "current_node": "n10",
+ "conversation_id": "00000000-0000-4000-8000-000000000000",
+ "default_model_slug": "gpt-5-6",
+ "is_archived": false,
+ "gizmo_id": null,
+ "safe_urls": [],
+ "moderation_results": [],
+ "plugin_ids": null
+}

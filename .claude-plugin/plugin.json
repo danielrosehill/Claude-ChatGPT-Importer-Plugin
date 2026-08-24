@@ -1,0 +1,20 @@
+{
+  "name": "chatgpt-importer",
+  "version": "0.1.0",
+  "description": "Import a ChatGPT conversation into local files via the browser. Captures the full thread from a chatgpt.com URL, a shared link, or an official export archive, then normalizes it to JSON and renders Markdown or PDF with user and assistant turns marked, artifacts (canvas docs, images, code) extracted, and conversation metadata recorded.",
+  "author": {
+    "name": "Daniel Rosehill",
+    "url": "https://github.com/danielrosehill"
+  },
+  "repository": "https://github.com/danielrosehill/Claude-ChatGPT-Importer-Plugin",
+  "license": "MIT",
+  "keywords": [
+    "chatgpt",
+    "conversation-import",
+    "browser-automation",
+    "claude-in-chrome",
+    "export",
+    "markdown",
+    "archival"
+  ]
+}
