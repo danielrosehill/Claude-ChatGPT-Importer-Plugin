@@ -34,6 +34,7 @@ timestamps, artifacts, citations and stats together, and every renderer reads it
 |---|---|
 | `import-chatgpt-conversation` | Entry point — picks the route, runs the pipeline |
 | `conversation-to-context` | Import into `context/` in the current repo as agent context |
+| `start-repo-from-thread` | New public/private repo seeded from one or more threads in `context/` |
 | `capture-via-api` | Primary browser capture |
 | `capture-via-dom` | Fallback scrape |
 | `import-export-archive` | Bulk import from an account export |

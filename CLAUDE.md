@@ -55,3 +55,11 @@ committed.
   not `finditer`. On a validation failure it retries from `start+1`, because
   finditer resumes past the whole rejected span and a greedy match straddling
   two adjacent numbers would swallow the second one unexamined.
+
+## start-repo-from-thread
+
+"Never commit an imported conversation" applies to **this** repo. The
+`start-repo-from-thread` skill deliberately commits transcripts into the
+*new* repo it creates — that is its purpose — after asking public vs private
+and offering redaction for public. Capture runs before `gh repo create` so a
+failed capture does not leave an empty repo.
