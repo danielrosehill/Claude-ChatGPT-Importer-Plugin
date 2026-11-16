@@ -142,6 +142,63 @@ Citations arrive in two overlapping places — `citations[].metadata`
 (`title`, `url`, `snippet`). A search-heavy answer populates both, so
 de-duplicate on URL rather than position.
 
+## Rich UI answers (`model_dil_v2`) — confirmed 2026-11-16
+
+Newer answers (seen on `gpt-6-instant`, 2026-11-16) can render rich UI cards:
+product rows with images, entity chips, inline citation pills, link buttons.
+The text part then contains JSX-like markup mixed with Markdown prose:
+
+```
+## The three I'd now focus on
+
+<box gap={3}>
+  <row align=start gap={3}>
+    <AsyncImage query="..." aspectRatio="5:4" maxWidth="136px"/>
+    <box flex="1" gap={1}>
+      **<Entity category="product" value="Mecha Comet"/>**
+      ... <Cite ref="turn759308search2"/>
+```
+
+Tags seen: layout `box row text title caption badge divider icon`, and
+objects `AsyncImage Entity Cite Link`. `Cite` takes `ref="…"` or
+`refs={["…","…"]}`. Indentation from nesting would turn prose into Markdown
+code blocks if left in place.
+
+The same message carries `metadata.model_dil_v2`:
+
+| Key | Holds |
+|---|---|
+| `code` | The markup again, without the prose around it |
+| `fallbackMarkdown` | **The whole answer as Markdown** — use this |
+| `fallbackMarkdownVersion` | `1` |
+| `requiredComponents` | e.g. `["AsyncImage","Cite","Entity","Link"]` |
+| `constants` | The answer's text strings by index |
+| `appData.opGenui.componentResults` | Resolved component state (image URLs etc.) |
+
+`fallbackMarkdown` writes inline objects as private-use-area markers,
+`\ue200KIND\ue202ARG(\ue202ARG…)\ue201`:
+
+| Kind | Args | Rendered as |
+|---|---|---|
+| `cite` | one or more ids `turn<N>search<M>` | ` ([domain](url))` |
+| `entity` | JSON `["product","Name"]` | `Name` |
+| `url` | title, URL | `[title](URL)` |
+| `image_group` | JSON `{"query":[…],"layout":"carousel",…}` | `*[images: query]*` |
+
+Cite ids resolve against `search_result_groups[].entries[].ref_id`
+(`turn_index`, `ref_type`, `ref_index`) — on **other** messages (the hidden
+`tool:web` turns), so the lookup is conversation-wide. In the first thread
+seen, all 12 cite ids resolved.
+
+A hidden leaf `assistant` message (`real_author: tool:web`) can carry the same
+markup with **no** `model_dil_v2`. It is skipped by default; with
+`--include-hidden` it goes through the tag converter.
+
+The normalizer prefers `fallbackMarkdown`, resolves markers, then converts
+any leftover tags (best effort). Each turn records `text_source`, and
+`stats.rich_ui_turns` counts the turns affected. Unknown marker kinds,
+unknown tags and unresolved cite ids go to `.unhandled`.
+
 ## Artifacts
 
 - **Canvas documents** — assistant message with `recipient`

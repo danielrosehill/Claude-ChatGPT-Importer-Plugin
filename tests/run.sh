@@ -41,6 +41,40 @@ grep -q '^title:' "$WORK/out.md" && ok "front matter" || bad "front matter"
 grep -q '^# Sources' "$WORK/out.md" && ok "sources section" || bad "sources section"
 grep -q 'user_messages: 3' "$WORK/out.md" && ok "stats in front matter" || bad "stats in front matter"
 
+echo "rich UI (genui) answers"
+# Synthetic, built inline: fixtures/sample-conversation.json stays the only
+# committed conversation JSON. Turn 1 has model_dil_v2.fallbackMarkdown with
+# private-use-area markers; turn 2 has raw markup and no fallback.
+python3 - "$WORK" <<'PY'
+import json,sys
+w=sys.argv[1]
+P,S,E="","",""
+srg=[{"entries":[{"url":"https://www.example.org/spec","title":"Spec","ref_id":{"turn_index":7,"ref_type":"search","ref_index":0}}]}]
+def node(i,parent,children,msg): return {"id":i,"parent":parent,"children":children,"message":msg}
+m={"root":node("root",None,["u"],None),
+   "u":node("u","root",["a1"],{"id":"u","author":{"role":"user"},"content":{"content_type":"text","parts":["Which device?"]},"metadata":{},"create_time":1}),
+   "a1":node("a1","u",["a2"],{"id":"a1","author":{"role":"assistant"},"create_time":2,
+     "content":{"content_type":"text","parts":["Intro\n\n<box gap={3}><Entity category=\"product\" value=\"Widget\"/></box>"]},
+     "metadata":{"search_result_groups":srg,"model_dil_v2":{"code":"<box/>","fallbackMarkdown":
+       f"Intro\n\n{P}image_group{S}{{\"query\":[\"widget photo\"]}}{E}\n\n**{P}entity{S}[\"product\",\"Widget\"]{E}** is small. {P}cite{S}turn7search0{E}\n\n{P}url{S}Specs{S}https://example.org/w{E}"}}}),
+   "a2":node("a2","a1",[],{"id":"a2","author":{"role":"assistant"},"create_time":3,"metadata":{},
+     "content":{"content_type":"text","parts":["Also:\n\n<box gap={3}>\n  <row align=start>\n    <AsyncImage query=\"gadget\" aspectRatio=\"4:5\"/>\n    <text weight=\"medium\">**<Entity category=\"product\" value=\"Gadget\"/>** is light. <Cite refs={[\"turn7search0\",\"turn9search9\"]}/></text>\n    <Link url=\"https://example.org/g\" title=\"Gadget page\"/>\n  </row>\n  <divider/>\n</box>"]}})}
+json.dump({"title":"genui","mapping":m,"current_node":"a2","create_time":1},open(f"{w}/g.json","w"))
+PY
+python3 "$ROOT/scripts/normalize_conversation.py" "$WORK/g.json" -o "$WORK/gn.json" 2>/dev/null
+g(){ python3 -c "import json;d=json.load(open('$WORK/gn.json'));t=[x['text'] for x in d['turns']];print($1)"; }
+check "fallback markdown used"  "$(g "d['turns'][1]['text_source']")" "model_dil_v2.fallbackMarkdown"
+check "no PUA chars left"       "$(g "any(c in s for s in t for c in '')")" "False"
+check "no genui tags left"      "$(g "any(x in s for s in t for x in ('<box','<row','<Cite','<Entity','<AsyncImage','<Link','<text'))")" "False"
+check "entity -> name"          "$(g "'**Widget** is small.' in t[1] and '**Gadget** is light.' in t[2]")" "True"
+check "cite -> source link"     "$(g "'([example.org](https://www.example.org/spec))' in t[1]")" "True"
+check "url marker -> link"      "$(g "'[Specs](https://example.org/w)' in t[1]")" "True"
+check "Link tag -> link"        "$(g "'[Gadget page](https://example.org/g)' in t[2]")" "True"
+check "images kept as text"     "$(g "'widget photo' in t[1] and 'gadget' in t[2]")" "True"
+check "markup not indented"     "$(g "any(l.startswith('    ') for l in t[2].splitlines())")" "False"
+check "unresolved cite flagged" "$(g "[u['ref'] for u in d['unhandled'] if u['where']=='citation']")" "['turn9search9']"
+check "rich turns counted"      "$(g "d['stats']['rich_ui_turns']")" "2"
+
 echo "redaction"
 python3 - "$WORK" <<'PY'
 import json,sys

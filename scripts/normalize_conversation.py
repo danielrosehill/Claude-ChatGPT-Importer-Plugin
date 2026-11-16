@@ -274,6 +274,150 @@ def extract_citations(msg: dict) -> list[dict]:
     return uniq
 
 
+# ------------------------------------------------- rich UI ("genui") markup
+#
+# Since late 2026 ChatGPT answers can carry rich UI. The visible message part
+# then holds JSX-like markup (<box>, <row>, <Entity/>, <Cite ref=.../>,
+# <AsyncImage/>, <Link/>, ...) and metadata.model_dil_v2 carries:
+#   code              - the markup again (without the prose around it)
+#   fallbackMarkdown  - the whole answer as Markdown, with inline objects as
+#                       private-use-area markers: KINDARG...
+# Prefer fallbackMarkdown, then resolve its markers. Raw markup without a
+# fallback goes through convert_genui_tags as a best effort.
+# See references/chatgpt-conversation-format.md, "Rich UI answers".
+
+PUA_MARKER = re.compile(r"([A-Za-z_]+)(?:(.*?))?", re.S)
+PUA_STRAY = re.compile(r"[-]")
+
+
+def build_ref_map(mapping: dict) -> dict[str, dict]:
+    """Map citation ids like 'turn576911search6' to {url, title, source}.
+
+    Cite markers in one message point at search results stored on *other*
+    messages (the hidden tool:web turns), so the map is built conversation-wide.
+    """
+    refs: dict[str, dict] = {}
+    for node in mapping.values():
+        meta = ((node or {}).get("message") or {}).get("metadata") or {}
+        for group in meta.get("search_result_groups") or []:
+            for e in group.get("entries") or []:
+                r = e.get("ref_id") or {}
+                if r.get("turn_index") is None:
+                    continue
+                key = f"turn{r['turn_index']}{r.get('ref_type', 'search')}{r.get('ref_index')}"
+                url = e.get("url")
+                refs.setdefault(key, {
+                    "url": url, "title": e.get("title"),
+                    "source": e.get("attribution") or e.get("source_name")
+                              or (re.sub(r"^https?://(www\.)?([^/]+).*", r"\2", url) if url else None),
+                })
+    return refs
+
+
+def _cite_md(ids: list[str], refs: dict, used: list[dict], unhandled: list) -> str:
+    links = []
+    for rid in ids:
+        rid = rid.strip()
+        hit = refs.get(rid)
+        if hit and hit.get("url"):
+            src = re.sub(r"^www\.", "", hit["source"] or "source")
+            links.append(f"[{src}]({hit['url']})")
+            used.append({"title": hit["title"], "url": hit["url"], "text": None})
+        elif rid:
+            links.append(f"[ref {rid}]")
+            unhandled.append({"where": "citation", "ref": rid, "note": "no matching search result"})
+    return f" ({', '.join(links)})" if links else ""
+
+
+def _tidy_cites(text: str) -> str:
+    # The fallback puts a space before each marker; the cite adds its own.
+    return re.sub(r"[ \t]+ \(\[", " ([", text)
+
+
+def resolve_pua_markers(text: str, refs: dict, used: list[dict], unhandled: list) -> str:
+    def sub(m: re.Match) -> str:
+        kind, body = m.group(1), m.group(2) or ""
+        args = body.split("") if body else []
+        if kind == "cite":
+            return _cite_md(args, refs, used, unhandled)
+        if kind == "entity":
+            try:
+                val = json.loads(body)
+                return str(val[1] if isinstance(val, list) and len(val) > 1 else val)
+            except (ValueError, TypeError):
+                return body
+        if kind == "url" and len(args) >= 2:
+            return f"[{args[0]}]({args[1]})"
+        if kind == "image_group":
+            try:
+                q = json.loads(body).get("query") or []
+            except (ValueError, AttributeError):
+                q = [body]
+            return f"*[images: {'; '.join(map(str, q))}]*"
+        unhandled.append({"where": "pua_marker", "kind": kind, "body": body[:200]})
+        return f"[{kind}: {body[:80]}]"
+
+    out = _tidy_cites(PUA_MARKER.sub(sub, text))
+    if PUA_STRAY.search(out):
+        unhandled.append({"where": "pua_marker", "note": "stray marker characters stripped"})
+        out = PUA_STRAY.sub("", out)
+    return out
+
+
+GENUI_LAYOUT = {"box", "row", "col", "column", "stack", "text", "title", "caption",
+                "badge", "grid", "card", "span", "list", "item"}
+GENUI_TAG = re.compile(r"<(/?)([A-Za-z][\w.]*)((?:\s+[^<>]*?)?)\s*(/?)>", re.S)
+GENUI_ATTR = re.compile(r'(\w+)=(?:"([^"]*)"|\{(.*?)\}(?=\s|/?>|$))', re.S)
+
+
+def convert_genui_tags(text: str, refs: dict, used: list[dict], unhandled: list) -> str:
+    """Best-effort Markdown from raw genui markup, for messages with no fallback."""
+    def attrs(s: str) -> dict:
+        return {k: v1 or v2 for k, v1, v2 in GENUI_ATTR.findall(s or "")}
+
+    def sub(m: re.Match) -> str:
+        closing, name, raw_attrs = m.group(1), m.group(2), m.group(3)
+        a = attrs(raw_attrs)
+        low = name.lower()
+        if low in GENUI_LAYOUT:
+            return ""
+        if closing:
+            return ""
+        if name == "Cite":
+            ids = [a["ref"]] if a.get("ref") else re.findall(r'"([^"]+)"', a.get("refs", ""))
+            return _cite_md(ids, refs, used, unhandled)
+        if name == "Entity":
+            return a.get("value", "")
+        if name == "Link":
+            return f"[{a.get('title') or a.get('url')}]({a.get('url')})"
+        if name == "AsyncImage":
+            return f"*[image: {a.get('query', '')}]*"
+        if low == "divider":
+            return "\n---\n"
+        if low == "icon":
+            return ""
+        unhandled.append({"where": "genui_tag", "tag": name, "attrs": raw_attrs.strip()[:200]})
+        return ""
+
+    out = _tidy_cites(GENUI_TAG.sub(sub, text))
+    # Markup is indented; left as is, 4+ spaces turns prose into code blocks.
+    out = "\n".join(line.strip() if line.startswith("  ") else line for line in out.splitlines())
+    return re.sub(r"\n{3,}", "\n\n", out)
+
+
+def has_genui_markup(text: str) -> bool:
+    return bool(re.search(r"<(Cite|Entity|AsyncImage|Link)\b|<(box|row)\b[^>]*>", text))
+
+
+def merge_citations(a: list[dict], b: list[dict]) -> list[dict]:
+    seen, out = set(), []
+    for c in a + b:
+        if c.get("url") and c["url"] not in seen:
+            seen.add(c["url"])
+            out.append(c)
+    return out
+
+
 # ------------------------------------------------------------- main pipeline
 
 def normalize(raw: dict, source_kind: str, source_url: str | None,
@@ -290,6 +434,8 @@ def normalize(raw: dict, source_kind: str, source_url: str | None,
     artifacts: list[dict] = []
     models: set[str] = set()
     skipped = {"hidden": 0, "tool": 0, "empty": 0, "system": 0}
+    refs = build_ref_map(mapping)
+    rich_turns = 0
 
     for node_id in path:
         msg = (mapping[node_id] or {}).get("message")
@@ -303,6 +449,16 @@ def normalize(raw: dict, source_kind: str, source_url: str | None,
         content = msg.get("content") or {}
 
         text, assets = render_content(content, unhandled)
+        text_source = "parts"
+        cited: list[dict] = []
+        fallback = (meta.get("model_dil_v2") or {}).get("fallbackMarkdown")
+        if isinstance(fallback, str) and fallback.strip():
+            text, text_source = fallback, "model_dil_v2.fallbackMarkdown"
+        if "\ue200" in text:
+            text = resolve_pua_markers(text, refs, cited, unhandled)
+        if has_genui_markup(text):
+            text = convert_genui_tags(text, refs, cited, unhandled)
+            text_source += "+genui_tags_converted"
         msg_artifacts = extract_artifacts(msg, text, assets)
 
         if hidden and not include_hidden:
@@ -335,9 +491,12 @@ def normalize(raw: dict, source_kind: str, source_url: str | None,
             "hidden": hidden,
             "excluded_from_context": msg.get("weight") == 0,
             "text": text,
+            "text_source": text_source,
             "artifacts": msg_artifacts,
-            "citations": extract_citations(msg),
+            "citations": merge_citations(extract_citations(msg), cited),
         }
+        if text_source != "parts":
+            rich_turns += 1
         turns.append(turn)
         for a in msg_artifacts:
             artifacts.append({**a, "turn_index": turn["index"],
@@ -389,6 +548,7 @@ def normalize(raw: dict, source_kind: str, source_url: str | None,
             "nodes_on_rendered_branch": len(path),
             "branch_points": count_branch_points(mapping),
             "has_alternate_branches": count_branch_points(mapping) > 0,
+            "rich_ui_turns": rich_turns,
             "skipped": skipped,
         },
         "turns": turns,

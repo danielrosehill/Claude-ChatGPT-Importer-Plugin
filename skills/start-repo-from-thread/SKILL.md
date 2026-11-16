@@ -71,7 +71,9 @@ not replace it: for an existing repo, use `conversation-to-context` directly.
 
 8. **Report** the repo URL, its visibility, and the list of imported threads
    with turn counts. Flag any thread whose normalize step wrote `.unhandled`
-   content.
+   content, and run the leftover-markup grep from `import-chatgpt-conversation`
+   on each transcript before committing: rich UI answers (product cards,
+   citation pills) are new, and markup that leaks through does not warn.
 
 ## Traps
 

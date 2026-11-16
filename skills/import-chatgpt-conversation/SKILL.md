@@ -74,6 +74,14 @@ If the conversation contains generated documents or images, mention
   `current_node`; do not replace that with a flat iteration.
 - **Never commit an imported conversation.** The plugin's `.gitignore` covers
   the usual output paths, but check before staging anything.
+- Check the rendered file for leftover rich-UI markup (ChatGPT's newer answers
+  carry product cards, entity chips and citation pills):
+  `grep -cE '<(box|row|Cite|Entity|AsyncImage|Link)\b|[\ue200-\ue203]' <out.md>`
+  should print `0`. The normalizer handles these (`stats.rich_ui_turns` counts
+  them), but a new component type would show up here before it reaches
+  `.unhandled`. If any remain, extend `resolve_pua_markers` /
+  `convert_genui_tags` and document the new kind in
+  `references/chatgpt-conversation-format.md`.
 - If `normalize_conversation.py` warns about unhandled content blocks, look at
   `.unhandled` in the output. It means OpenAI shipped a content type the
   importer does not know, and something is missing from the transcript.

@@ -56,6 +56,15 @@ committed.
   finditer resumes past the whole rejected span and a greedy match straddling
   two adjacent numbers would swallow the second one unexamined.
 
+- Rich UI answers (2026-11) put JSX-like markup (`<box>`, `<Entity/>`,
+  `<Cite/>`) in the message text. The answer to render is
+  `metadata.model_dil_v2.fallbackMarkdown`, whose `\ue200…\ue201` markers
+  `resolve_pua_markers` expands. Before this was handled, transcripts showed the
+  raw tags and **nothing warned**, because the content type is still `text`. When
+  a new UI feature ships, check a fresh capture for leftover `<Tag` or
+  `\ue200` before trusting a clean `.unhandled`. See the reference doc's
+  "Rich UI answers" section.
+
 ## start-repo-from-thread
 
 "Never commit an imported conversation" applies to **this** repo. The
