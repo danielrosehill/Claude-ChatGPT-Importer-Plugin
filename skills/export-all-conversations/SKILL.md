@@ -32,6 +32,20 @@ No message body passes through the agent's context.
    Report rows, date range, `by_source`, normalize errors and export failures (the `-000` manifest lists them).
 5. Incremental later: `OPTS.updatedAfter: '<ISO date of last run>'`, then `--merge` into the previous table.
 
+## Official routes on a Business (Team) workspace (checked 2026-11-23)
+
+- Settings → Data controls has **no "Export data"** button on a Business workspace (Shared links, Archived chats,
+  Archive all, Delete all only).
+- A privacy-portal "download my data" request from a Business account was auto-closed within a minute with a
+  pointer to the Enterprise Compliance API.
+- The Compliance API (`chatgpt.com/admin/api-reference`, compliance-logs scopes `chatgpt.enterprise.*`) needs an
+  Admin API key. Admin console → Credentials on Business only offers personal access tokens with the scopes
+  **Workspace Agents** and **Codex**: no compliance or history scope. So it is not available on Business.
+- Third-party exporters (pionxzh/chatgpt-exporter, brianjlacy/export-chatgpt, others) use the same per-conversation
+  endpoint; none has a batch endpoint. brianjlacy's CLI defaults to one request per 60 s for this reason.
+
+So on Business the browser route here, throttled, is the only self-serve route to full conversation content.
+
 ## Endpoints (observed 2026-11-22)
 
 | What | Request |
