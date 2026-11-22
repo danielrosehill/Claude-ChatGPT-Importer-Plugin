@@ -40,5 +40,5 @@ the script refreshes the token; on 429/5xx it backs off exponentially.
 ## Privacy
 
 The output is the user's entire history. Never commit it; push only to a private dataset (`build_dataset.py`
-refuses an existing public repo). A Team/Business workspace lists only the logged-in member's own chats here, not
-other members'.
+refuses an existing public repo). In a Team/Business workspace these endpoints serve the
+logged-in member's own sidebar (assumed from what the UI shows; not verified against another member's account).
