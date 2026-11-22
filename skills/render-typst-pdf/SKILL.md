@@ -27,6 +27,18 @@ to their name. A transcript that leaves this machine with a real name on it is
 harder to walk back than one that does not. `--assistant-label` works the same
 way and defaults to `ChatGPT`.
 
+### Several people on one account (voice mode)
+
+When two people shared one phone in voice mode, every human turn is "user". If the
+normalized JSON has been split per speaker (each user turn carrying `author_name`,
+and optionally `palette`: `user`, `user2` or `muted`), both renderers print that
+name instead of `--user-label`, and `render_pdf.py` colours each person
+differently. The Markdown front matter then lists the names under
+`speaker_labels.user`. One way to produce such a file: align the thread against a
+diarized recording of the same conversation (AssemblyAI speaker labels; match the
+two word streams, give each ChatGPT word the speaker of the recording word it
+matched, split user turns where the speaker changes).
+
 ## What the template produces
 
 - Cover block: title, date held, model, per-speaker message counts, source URL,
