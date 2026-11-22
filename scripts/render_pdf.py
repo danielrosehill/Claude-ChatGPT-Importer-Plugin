@@ -92,7 +92,11 @@ def build_typst(doc: dict, *, user_label: str, assistant_label: str,
 
     for turn, body in zip(turns, bodies):
         if turn["role"] == "user":
-            kind, label = "user", user_label
+            # Multi-speaker voice mode: a labelled turn carries its own speaker name and,
+            # optionally, a palette ("user", "user2", "muted"), so two people on one
+            # account render as two speakers. Unlabelled turns keep the --user-label.
+            kind = turn.get("palette") or "user"
+            label = turn.get("author_name") or user_label
         elif turn["role"] == "assistant":
             kind, label = "assistant", assistant_label
         else:

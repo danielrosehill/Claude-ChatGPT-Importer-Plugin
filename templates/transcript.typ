@@ -12,6 +12,9 @@
   user: (bg: rgb("#eef2ff"), accent: rgb("#4338ca")),
   assistant: (bg: rgb("#f7f7f8"), accent: rgb("#0f766e")),
   other: (bg: rgb("#fdf6e3"), accent: rgb("#92400e")),
+  // Second human speaker sharing one account (voice mode), and unattributed speech.
+  user2: (bg: rgb("#fdf2f8"), accent: rgb("#9d174d")),
+  muted: (bg: rgb("#fafafa"), accent: luma(120)),
 )
 
 // Returns a flat array of two cells, or an empty array when there is no value.
@@ -95,10 +98,16 @@
   body
 }
 
+// pandoc's typst writer emits `#horizontalrule` for a Markdown `---` and only defines it in its own standalone
+// template, which this renderer does not use. Without this, any answer containing a divider fails to compile.
+#let horizontalrule = block(spacing: 0.8em, line(length: 100%, stroke: 0.5pt + luma(200)))
+
 // One message. `kind` selects the palette; `label` is the displayed speaker.
 #let turn(kind: "user", label: "", stamp: "", body) = {
   let t = if kind == "user" { theme.user }
           else if kind == "assistant" { theme.assistant }
+          else if kind == "user2" { theme.user2 }
+          else if kind == "muted" { theme.muted }
           else { theme.other }
 
   block(

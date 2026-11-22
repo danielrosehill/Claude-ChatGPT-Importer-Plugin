@@ -84,7 +84,9 @@ def md_front_matter(doc: dict, user_label: str, assistant_label: str) -> str:
         "artifacts": s.get("artifacts"),
         "duration_minutes": s.get("duration_minutes"),
         "captured_at": doc["source"].get("captured_at"),
-        "speaker_labels": {"user": user_label, "assistant": assistant_label},
+        "speaker_labels": {"user": sorted({t["author_name"] for t in doc["turns"]
+                                           if t["role"] == "user" and t.get("author_name")}) or user_label,
+                           "assistant": assistant_label},
     }
     if doc.get("redaction"):
         fm["redacted"] = True
@@ -152,12 +154,14 @@ def render_markdown(doc: dict, *, user_label: str, assistant_label: str,
     url_to_n = {s["url"]: s["n"] for s in sources}
 
     for turn in doc["turns"]:
-        label = user_label if turn["role"] == "user" else (
+        label = (turn.get("author_name") or user_label) if turn["role"] == "user" else (
             assistant_label if turn["role"] == "assistant" else turn["role"].title())
 
         suffix = ""
         if timestamps and turn.get("created_at"):
-            suffix = f" — {turn['created_at'][:19].replace('T', ' ')} UTC"
+            ts = turn["created_at"]
+            zone = "UTC" if ts.endswith(("+00:00", "Z")) else ts[19:].split(".")[-1][-6:]
+            suffix = f" — {ts[:19].replace('T', ' ')} {zone}"
         if turn["role"] == "assistant" and turn.get("model"):
             suffix += f" ({turn['model']})"
 
