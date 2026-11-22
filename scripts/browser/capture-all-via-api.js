@@ -17,8 +17,10 @@ await (async () => {
   const OPTS = {
     limit: 20,            // max conversations in total (0 = all). Test with 20 first.
     chunk: 200,           // conversations per JSONL file
-    concurrency: 3,
-    delayMs: 250,         // per request, per worker
+    concurrency: 1,       // conversation DETAIL fetches are rate-limited (see SKILL.md): stay at 1-2
+    delayMs: 1500,        // per request, per worker; a 429's Retry-After is always honoured on top
+    listPages: 10,        // list pages fetched in parallel (the list endpoint was not throttled)
+    ids: null,            // optional priority list of conversation ids: fetch only these, in this order
     accounts: null,       // null = all accounts; or ['<account id>', ...]
     archived: true,
     projects: true,
@@ -38,7 +40,7 @@ await (async () => {
 
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   let token = session.accessToken;
-  async function api(path, acct, tries = 6) {
+  async function api(path, acct, tries = 12) {
     for (let i = 0; i < tries; i++) {
       const r = await fetch(path, { headers: { Authorization: 'Bearer ' + token,
                                                ...(acct ? { 'ChatGPT-Account-Id': acct } : {}) } });
@@ -49,7 +51,11 @@ await (async () => {
         if (s2.accessToken) token = s2.accessToken;
         st.retries++; continue;
       }
-      if (r.status === 429 || r.status >= 500) { st.retries++; await sleep(2000 * 2 ** i); continue; }
+      if (r.status === 429) {  // honour Retry-After; the history-detail limiter goes from 4 s to 60 s when pushed
+        st.retries++; const w = +(r.headers.get('retry-after') || 0);
+        st.lastRetryAfter = w; await sleep(Math.max(w * 1000, 2000 * 2 ** Math.min(i, 5))); i = Math.min(i, 4); continue;
+      }
+      if (r.status >= 500) { st.retries++; await sleep(2000 * 2 ** i); continue; }
       throw new Error('http_' + r.status + ' ' + path);
     }
     throw new Error('gave_up ' + path);
@@ -86,11 +92,15 @@ await (async () => {
       const full = () => OPTS.limit && seen.size >= OPTS.limit;
       for (const a of accts) {
         for (const arch of OPTS.archived ? [false, true] : [false]) {
-          for (let off = 0; !full(); off += 100) {
-            const d = await api(`/backend-api/conversations?offset=${off}&limit=100&order=updated&is_archived=${arch}`, a.id);
-            const items = d?.items || [];
-            items.forEach(it => add(it, a.id, arch ? 'archived' : 'list'));
-            if (items.length < 100) break;
+          // listPages pages at a time; stop after a batch containing a short page
+          for (let base = 0, more = true; more && !full(); base += 100 * OPTS.listPages) {
+            const pages = await Promise.all(Array.from({ length: OPTS.listPages }, (_, k) =>
+              api(`/backend-api/conversations?offset=${base + 100 * k}&limit=100&order=updated&is_archived=${arch}`, a.id)));
+            for (const d of pages) {
+              const items = d?.items || [];
+              items.forEach(it => add(it, a.id, arch ? 'archived' : 'list'));
+              if (items.length < 100) more = false;
+            }
             await sleep(OPTS.delayMs);
           }
         }
@@ -101,7 +111,8 @@ await (async () => {
             (d?.items || []).forEach(x => { const g = x.gizmo?.gizmo || x.gizmo; if (g?.id) projects.push(g.id); });
             cursor = d?.cursor && d.cursor !== cursor && (d?.items || []).length ? d.cursor : null;
           } while (cursor);
-          for (const g of projects) {
+          st.projects = projects.length;
+          await Promise.all(projects.map(async g => {  // projects in parallel
             let c = '0';
             const cursors = new Set();
             while (c !== null && !full() && !cursors.has(c)) {  // guard: a repeated cursor would loop forever
@@ -110,12 +121,15 @@ await (async () => {
               const items = d?.items || [];
               items.forEach(it => add(it, a.id, 'project:' + g));
               c = items.length ? (d?.cursor ?? null) : null;
-              await sleep(OPTS.delayMs);
             }
-          }
+          }));
         }
       }
       let queue = [...seen.values()];
+      if (OPTS.ids) {  // priority list: only these ids, in the given order
+        const pos = new Map(OPTS.ids.map((id, k) => [id, k]));
+        queue = queue.filter(q => pos.has(q.id)).sort((x, y) => pos.get(x.id) - pos.get(y.id));
+      }
       if (OPTS.limit) queue = queue.slice(0, OPTS.limit);
       st.listed = queue.length;
 
@@ -135,7 +149,7 @@ await (async () => {
           } catch (e) { st.failed.push({ id: item.id, error: String(e.message || e) }); }
           st.done++;
           if (buf.length >= OPTS.chunk) { const out = buf; buf = []; save(out, ++fileNo); }
-          await sleep(OPTS.delayMs);
+          if (OPTS.delayMs) await sleep(OPTS.delayMs);
         }
       };
       await Promise.all(Array.from({ length: OPTS.concurrency }, worker));

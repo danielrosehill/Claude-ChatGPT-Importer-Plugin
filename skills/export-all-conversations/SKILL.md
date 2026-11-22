@@ -1,6 +1,6 @@
 ---
 name: export-all-conversations
-description: Batch-export a whole ChatGPT history (every chat, archived chats and chats inside Projects, all workspaces the login sees) from a logged-in chatgpt.com tab, then build one Parquet table with a row per conversation and a date column, optionally pushed to a private Hugging Face dataset. Use on "export all my ChatGPT chats", "batch export", "mine my ChatGPT history", "make a dataset of my chats", or when the official export is slow or refused.
+description: Batch-export ChatGPT conversations (a priority subset, or incremental updates; a whole large history is rate-limited, so use the official export for that) (every chat, archived chats and chats inside Projects, all workspaces the login sees) from a logged-in chatgpt.com tab, then build one Parquet table with a row per conversation and a date column, optionally pushed to a private Hugging Face dataset. Use on "export all my ChatGPT chats", "batch export", "mine my ChatGPT history", "make a dataset of my chats", or when the official export is slow or refused.
 ---
 
 # Export every conversation
@@ -15,8 +15,15 @@ No message body passes through the agent's context.
 2. Paste the script into `javascript_tool` with `OPTS.limit: 20`. It returns at once; poll
    `JSON.stringify(window.__cgx.progress())`. Check the files arrived (find them by name; Chrome's download
    directory is not always `~/Downloads`) and build a test table (step 4).
-3. Re-run with `limit: 0`. Speed seen 2026-11-22: ~0.6 s per conversation at concurrency 3, delay 250 ms,
-   so ~12,000 chats take about 2 hours. Keep the tab open; don't navigate it. Raw size is ~250 KB per chat on average.
+3. **Rate limit (measured 2026-11-22/23).** Listing (`/conversations`) was not throttled: 12,190 chats listed in
+   ~3 minutes, 10 pages in parallel. Conversation *detail* (`/conversation/<id>`) has its own limiter: a burst of
+   ~150-200 goes through (40 at 10-way concurrency ran at 16.6/s), then every request gets 429 with headers
+   `x-oai-history-detail-rate-limited: 1` and `retry-after` of 4 s at first, then **60 s**: about one chat per
+   minute. Hammering it with concurrency 10 is what pushed it to 60 s. So a full history (10k+) is NOT a browser job:
+   use the official export (Settings → Data controls → Export, or a privacy-portal "download my data" request), and
+   use this script for (a) a priority subset via `OPTS.ids`, (b) incremental runs via `updatedAfter`, at
+   `concurrency: 1`. The script honours `retry-after`. How long the penalty lasts was not measured.
+   Keep the tab open; don't navigate it. Raw size is ~100-250 KB per chat on average.
 4. Move the files out of the download folder, then:
    ```bash
    uv run --script scripts/build_dataset.py chatgpt-export-<run>-*.jsonl --out chats.parquet --tz <zone> \
